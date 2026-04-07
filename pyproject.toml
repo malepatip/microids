@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "microids"
+version = "0.1.0"
+description = "A framework for building AI-coordinated device workflows"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [
+    { name = "microids contributors" },
+]
+keywords = ["ai", "iot", "devices", "workflows", "llm", "coordination"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Home Automation",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "click>=8.0",
+    "pyyaml>=6.0",
+    "rich>=13.0",
+    "aiohttp>=3.9",
+]
+
+[project.optional-dependencies]
+server = ["fastapi>=0.100", "uvicorn>=0.20"]
+bedrock = ["boto3>=1.28"]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "hypothesis>=6.0",
+    "mypy>=1.0",
+    "ruff>=0.1",
+]
+
+[project.scripts]
+microids = "microids.cli:main"
+
+[project.entry-points."microids.channels"]
+
+[project.entry-points."microids.agents"]
