@@ -140,9 +140,9 @@ Define routines in `ROUTINES.md`. The LLM reads this file to match goals to devi
 
 ```markdown
 ## Leaving for work
-1. Open the garage door (device_id: cover.my_door, capability: open)
-2. Start the vacuum (device_id: vacuum.robovac, capability: start)
-3. Water the front lawn (device_id: switch.rachio_front_lawn, capability: turn_on)
+1. Open the garage door (device_id: cover.garage_door, capability: open)
+2. Start the vacuum (device_id: vacuum.robot_vacuum, capability: start)
+3. Water the front lawn (device_id: switch.front_sprinkler, capability: turn_on)
 ```
 
 ## State-aware commands
@@ -187,7 +187,6 @@ microids/
 ├── tests/               # 146 unit + integration tests
 ├── ROUTINES.md          # Your home routines
 ├── .env.example         # Config template
-├── deploy_hetzner.py    # One-command deploy to Hetzner VPS
 └── pyproject.toml
 ```
 
