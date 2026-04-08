@@ -36,6 +36,9 @@ class GoalRequest(BaseModel):
     goal: str
     agent: str = "groq"
 
+# Max goal length to prevent token abuse
+_MAX_GOAL_LENGTH = 500
+
 
 class GoalResponse(BaseModel):
     goal: str
@@ -246,6 +249,13 @@ async def switch_model(req: ModelSwitch):
 async def execute_goal(req: GoalRequest):
     if not _gateway:
         raise HTTPException(503, "Gateway not initialized")
+
+    # Input validation
+    goal = req.goal.strip()
+    if not goal:
+        raise HTTPException(400, "Goal cannot be empty")
+    if len(goal) > _MAX_GOAL_LENGTH:
+        raise HTTPException(400, f"Goal too long ({len(goal)} chars, max {_MAX_GOAL_LENGTH})")
 
     # In simulator mode, always use the pre-configured gateway (Groq + mock channel)
     if _mock_channel:
@@ -618,9 +628,26 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 
 /* Responsive */
 @media (max-width: 768px) {
-  .app { flex-direction: column; }
-  .chat-panel { border-right: none; border-bottom: 1px solid var(--border); }
-  .device-panel { width: 100%; height: 45vh; }
+  .app { flex-direction: column-reverse; }
+  .chat-panel { border-right: none; min-height: 55vh; }
+  .device-panel { width: 100%; height: auto; max-height: 40vh; border-bottom: 1px solid var(--border); }
+  .device-list { flex-direction: row; flex-wrap: wrap; padding: 8px; gap: 6px; overflow-x: auto; }
+  .device-card { min-width: 140px; flex: 1; padding: 10px; }
+  .card-emoji { font-size: 22px; width: 36px; height: 36px; }
+  .card-name { font-size: 12px; }
+  .card-zone { font-size: 9px; }
+  .card-state { font-size: 10px; }
+  .header h1 { font-size: 14px; }
+  .header .badge { font-size: 9px; }
+  .device-header h2 { font-size: 12px; }
+  .input-wrap input { font-size: 16px; padding: 10px 14px; }
+  .input-wrap button { padding: 10px 16px; font-size: 12px; }
+  .welcome { padding: 20px 12px; }
+  .welcome .logo { font-size: 24px; }
+  .msg .bubble { font-size: 12px; padding: 8px 12px; }
+  .msg.user .bubble { margin-left: 20px; }
+  .msg.system .bubble { margin-right: 20px; }
+  #modelSelect { max-width: 120px; font-size: 9px; }
 }
 </style>
 </head>
@@ -651,7 +678,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     </div>
     <div class="input-area">
       <div class="input-wrap">
-        <input type="text" id="goalInput" placeholder="Tell your home what to do..." autocomplete="off" />
+        <input type="text" id="goalInput" placeholder="Tell your home what to do..." autocomplete="off" maxlength="500" />
         <button id="sendBtn" onclick="sendGoal()">Send</button>
       </div>
     </div>
