@@ -31,8 +31,8 @@ SAFETY:
 MULTI-DEVICE SCENARIOS — when the goal implies multiple devices, include ALL of them:
 - Bedtime/goodnight/sleep/going to bed → light.turn_off + close garage + detect_motion camera + return_to_base vacuum
 - Leaving/heading out/going to work/bye → light.turn_off + close garage + detect_motion camera
-- Arriving/I'm home/good morning/wake up → light.turn_on + open garage
-- Everything off/shut down/reset → light.turn_off + close garage + return_to_base vacuum + sprinkler.turn_off
+- Arriving/I'm home/good morning/wake up → light.turn_on + open garage + stop camera
+- Everything off/shut down/reset → light.turn_off + close garage + return_to_base vacuum + sprinkler.turn_off + stop camera
 
 Rules:
 1. Each subtask targets ONE device using its EXACT capability name.
@@ -115,14 +115,14 @@ def build_few_shot_examples(device_capabilities: list[dict]) -> list[dict]:
 
     # Example 3: Multi-device — arriving home
     tasks, tid = [], 0
-    for dtype, substr, desc in [("light", "turn_on", "Turn on lights"), ("cover", "open", "Open garage")]:
+    for dtype, substr, desc in [("light", "turn_on", "Turn on lights"), ("cover", "open", "Open garage"), ("camera", "stop", "Stop security camera")]:
         if c := cap(dtype, substr):
             tid += 1
             tasks.append({"id": f"task-{tid}", "description": desc, "required_capability": c, "parameters": {"device_id": did(dtype)}, "dependencies": [], "priority": tid})
     if len(tasks) >= 2:
         examples.extend([
             {"role": "user", "content": f"{fleet_text}\n\nGoal: I'm home"},
-            {"role": "assistant", "content": json.dumps({"subtasks": tasks, "reasoning": "Arriving home: turn on lights and open garage."})},
+            {"role": "assistant", "content": json.dumps({"subtasks": tasks, "reasoning": "Arriving home: turn on lights, open garage, stop security camera."})},
         ])
 
     # Example 4: Nonsense
