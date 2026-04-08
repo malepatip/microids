@@ -40,7 +40,6 @@ Rules:
 3. Use dependencies when order matters.
 4. Only use capabilities listed in the fleet. Never invent.
 5. If the goal is unrelated to any device, return {"subtasks": [], "reasoning": "..."}.
-6. For "check" or "status" requests about a specific device, use the camera snapshot if available. If no camera, return empty with reasoning explaining status queries aren't supported yet.
 
 Output ONLY valid JSON: {"subtasks": [...], "reasoning": "..."}"""
 

@@ -46,6 +46,7 @@ class GoalResponse(BaseModel):
     duration_seconds: float
     results: list[dict[str, Any]]
     error: str | None = None
+    message: str | None = None  # For text responses (status queries)
 
 
 class DeviceInfo(BaseModel):
@@ -245,6 +246,43 @@ async def switch_model(req: ModelSwitch):
     return {"status": "ok", "agent": new_agent.model_name()}
 
 
+import re as _re
+
+# Keywords that indicate a state query, not a command
+_QUERY_PATTERNS = [
+    (r"\b(?:check|status|state|how is|how's|what's|is the|is my)\b.*\b(garage|door|gate)\b", "garage", "cover"),
+    (r"\b(?:check|status|state|how is|how's|what's|is the|is my)\b.*\b(vacuum|robot|robovac)\b", "vacuum", "vacuum"),
+    (r"\b(?:check|status|state|how is|how's|what's|is the|is my)\b.*\b(sprinkler|water|garden)\b", "sprinkler", "sprinkler"),
+    (r"\b(?:check|status|state|how is|how's|what's|is the|is my)\b.*\b(camera|front door|outside)\b", "camera", "camera"),
+    (r"\b(?:check|status|state|how is|how's|what's|is the|is my)\b.*\b(light|lights|lamp)\b", "lights", "light"),
+    # Reverse order: "garage check", "is the garage open"
+    (r"\b(garage|door|gate)\b.*\b(?:check|status|open|closed)\b", "garage", "cover"),
+    (r"\b(light|lights)\b.*\b(?:check|status|on|off)\b", "lights", "light"),
+    (r"\b(vacuum|robot)\b.*\b(?:check|status|running|docked)\b", "vacuum", "vacuum"),
+]
+
+_STATE_LABELS = {
+    "garage": {"closed": "🚪 The garage door is closed.", "open": "🚪 The garage door is open.", "opening": "🚪 The garage door is opening...", "closing": "🚪 The garage door is closing..."},
+    "vacuum": {"docked": "🤖 The vacuum is docked.", "cleaning": "🤖 The vacuum is cleaning.", "mopping": "🤖 The vacuum is mopping.", "returning": "🤖 The vacuum is returning to dock.", "paused": "🤖 The vacuum is paused.", "undocking": "🤖 The vacuum is undocking..."},
+    "sprinkler": {"off": "💧 The sprinkler is off.", "watering": "💧 The sprinkler is watering.", "starting": "💧 The sprinkler is starting...", "stopping": "💧 The sprinkler is stopping..."},
+    "camera": {"idle": "📷 The camera is idle.", "recording": "📷 The camera is recording.", "snapshot": "📷 The camera just took a snapshot."},
+    "lights": {"off": "💡 The lights are off.", "on": "💡 The lights are on."},
+}
+
+
+def _handle_state_query(goal: str) -> str | None:
+    """Detect state queries and return device status without hitting the LLM."""
+    goal_lower = goal.lower()
+    for pattern, device_key, device_type in _QUERY_PATTERNS:
+        if _re.search(pattern, goal_lower):
+            sim_state = _mock_channel.get_simulator_state()
+            if device_key in sim_state:
+                state = sim_state[device_key]["state"]
+                labels = _STATE_LABELS.get(device_key, {})
+                return labels.get(state, f"{sim_state[device_key]['emoji']} {sim_state[device_key]['name']} is {state}.")
+    return None
+
+
 @app.post("/goal", response_model=GoalResponse)
 async def execute_goal(req: GoalRequest):
     if not _gateway:
@@ -256,6 +294,15 @@ async def execute_goal(req: GoalRequest):
         raise HTTPException(400, "Goal cannot be empty")
     if len(goal) > _MAX_GOAL_LENGTH:
         raise HTTPException(400, f"Goal too long ({len(goal)} chars, max {_MAX_GOAL_LENGTH})")
+
+    # State query detection — answer from device state without LLM
+    if _mock_channel:
+        query_response = _handle_state_query(goal)
+        if query_response:
+            return GoalResponse(
+                goal=goal, status="completed", duration_seconds=0.0,
+                results=[], message=query_response,
+            )
 
     # In simulator mode, always use the pre-configured gateway (Groq + mock channel)
     if _mock_channel:
@@ -841,7 +888,9 @@ async function sendGoal() {
     const bubble = sysMsg.querySelector('.bubble');
 
     let html = '';
-    if (d.results && d.results.length) {
+    if (d.message) {
+      html = '<div style="font-size:14px;line-height:1.6;padding:4px 0;">' + escapeHtml(d.message) + '</div>';
+    } else if (d.results && d.results.length) {
       d.results.forEach(t => {
         let cls, icon, status;
         const device = (t.device_id || '').replace('mock:', '');
